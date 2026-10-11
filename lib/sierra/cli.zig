@@ -17,6 +17,7 @@ pub const Args = struct {
     output: ?[]const u8 = null,
     track_allocations: bool = false,
     seed: ?u64 = null,
+    verbose: bool = false,
     /// Extra positional arguments (e.g. file paths for yaml-zig).
     positionals: []const []const u8 = &.{},
 };
@@ -39,6 +40,7 @@ pub fn printHelp(writer: *Io.Writer) !void {
         \\  --output <path>        Write report to a file (default: stdout)
         \\  --benchmem             Enable Zig allocator tracking where supported
         \\  --seed <n>             RNG seed for shuffled execution order
+        \\  --verbose              Print per-benchmark estimator / CI details
         \\  -h, --help             Show this help
         \\
     );
@@ -60,6 +62,8 @@ pub fn parse(gpa: std.mem.Allocator, arg_iter: anytype) !Args {
             args.list = true;
         } else if (std.mem.eql(u8, arg, "--benchmem")) {
             args.track_allocations = true;
+        } else if (std.mem.eql(u8, arg, "--verbose") or std.mem.eql(u8, arg, "-v")) {
+            args.verbose = true;
         } else if (std.mem.eql(u8, arg, "--filter") or std.mem.eql(u8, arg, "-f")) {
             args.filter = try needValue(arg_iter, arg);
         } else if (std.mem.startsWith(u8, arg, "--filter=")) {

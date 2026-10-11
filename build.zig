@@ -45,12 +45,12 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(memory_tests).step);
 
     const sierra_fast = b.createModule(.{
-        .root_source_file = b.path("lib/sierra.root.zig"),
+        .root_source_file = b.path("lib/sierra/root.zig"),
         .target = target,
         .optimize = .ReleaseFast,
     });
     const example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/sierra/basic.zig"),
+        .root_source_file = b.path("examples/basic.zig"),
         .target = target,
         .optimize = .ReleaseFast,
     });

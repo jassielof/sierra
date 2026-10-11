@@ -15,13 +15,16 @@ pub const Options = struct {
     items_per_iter: ?u64 = null,
     /// Track Zig allocator metrics (uses `b.allocator`).
     track_allocations: bool = false,
-    /// Group name for reporting.
+    /// Group / backend name for reporting (e.g. "yaml", "fy").
     group: ?[]const u8 = null,
+    /// Human workload label for comparison tables (e.g. "synthetic-tiny", "bundle.yaml").
+    label: ?[]const u8 = null,
 };
 
 pub const Result = struct {
     name: []const u8,
     group: ?[]const u8 = null,
+    label: ?[]const u8 = null,
     summary: statistics.Summary,
     /// Primary estimator used in reports.
     estimator: []const u8 = "median",
@@ -256,6 +259,7 @@ pub const Bench = struct {
         return .{
             .name = self.name,
             .group = self.options.group,
+            .label = self.options.label,
             .summary = summary,
             .iterations = self.total_iterations,
             .batch_size = self.batch_size,

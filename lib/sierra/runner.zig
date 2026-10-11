@@ -32,6 +32,10 @@ pub fn runSpecs(comptime root: type, specs: []const registry.Spec, init: std.pro
     var stdout_writer = Io.File.stdout().writer(io, &stdout_buf);
     const stdout = &stdout_writer.interface;
 
+    var stderr_buf: [1024]u8 = undefined;
+    var stderr_writer = Io.File.stderr().writer(io, &stderr_buf);
+    const stderr = &stderr_writer.interface;
+
     if (args.help) {
         try cli.printHelp(stdout);
         try stdout.flush();
@@ -97,20 +101,10 @@ pub fn runSpecs(comptime root: type, specs: []const registry.Spec, init: std.pro
         try root.sierraPrepare(init, args.positionals);
     }
 
-    if (args.format == .text) {
-        try stdout.print("Sierra {s}  zig {s}  optimize={s}  {s}/{s}\n", .{
-            meta.sierra_version,
-            meta.zig_version,
-            meta.optimize,
-            meta.os,
-            meta.arch,
-        });
-        try report.writeTextHeader(stdout);
-    } else if (args.format == .csv) {
-        try report.writeCsvHeader(stdout);
-    }
-
     for (selected.items) |spec| {
+        try stderr.print("running {s}...\n", .{spec.name});
+        try stderr.flush();
+
         var options = spec.options;
         if (args.track_allocations) options.track_allocations = true;
 
@@ -120,15 +114,12 @@ pub fn runSpecs(comptime root: type, specs: []const registry.Spec, init: std.pro
         }
         defer b.deinit();
 
-        // The benchmark function owns the iteration loop via `while (try b.next())`.
         try spec.func(&b);
 
         const result = b.finish() catch |err| switch (err) {
             error.BenchmarkSkipped => {
-                if (args.format == .text) {
-                    try stdout.print("{s:<31} skipped\n", .{spec.name});
-                    try stdout.flush();
-                }
+                try stderr.print("  skipped {s}\n", .{spec.name});
+                try stderr.flush();
                 continue;
             },
             else => {
@@ -137,19 +128,44 @@ pub fn runSpecs(comptime root: type, specs: []const registry.Spec, init: std.pro
             },
         };
         try results.append(gpa, result);
-
-        const baseline = comparison.findResult(baseline_results, result.name);
-        switch (args.format) {
-            .text => try report.writeTextResult(stdout, result, baseline),
-            .csv => try report.writeCsvResult(stdout, result),
-            .json => {},
-        }
-        try stdout.flush();
     }
 
-    if (args.format == .json) {
-        try report.writeJsonResults(gpa, stdout, meta, results.items);
-        try stdout.flush();
+    const rows = try report.buildDisplayRows(gpa, results.items);
+    defer report.freeDisplayRows(gpa, rows);
+
+    switch (args.format) {
+        .text => {
+            try report.writeComparisonHeader(stdout, meta, args.seed);
+            for (rows) |row| try report.writeComparisonRow(stdout, row);
+            try report.writeVsFooter(stdout, rows);
+            if (args.verbose) {
+                try stdout.writeAll("\n");
+                for (results.items) |r| {
+                    try report.writeVerboseResult(stdout, r);
+                    if (comparison.findResult(baseline_results, r.name)) |base| {
+                        const rel = comparison.relativeChange(r.summary.median, base.median_ns);
+                        try stdout.print("    vs baseline {s}{d:.1}%\n", .{
+                            if (rel >= 0) "+" else "",
+                            rel * 100.0,
+                        });
+                    }
+                }
+            }
+            try stdout.flush();
+        },
+        .csv => {
+            try report.writeCsvHeader(stdout);
+            for (results.items) |r| try report.writeCsvResult(stdout, r);
+            try stdout.flush();
+        },
+        .json => {
+            try report.writeJsonResults(gpa, stdout, meta, results.items);
+            try stdout.flush();
+        },
+    }
+
+    if (init.environ_map.get("GITHUB_STEP_SUMMARY")) |summary_path| {
+        try report.appendGithubStepSummary(io, gpa, summary_path, meta, rows);
     }
 
     if (args.save_baseline) |path| {
@@ -194,7 +210,12 @@ fn currentMeta() comparison.Meta {
     return .{
         .sierra_version = version,
         .zig_version = builtin.zig_version_string,
-        .optimize = @tagName(builtin.mode),
+        .optimize = switch (builtin.mode) {
+            .Debug => "Debug",
+            .ReleaseSafe => "ReleaseSafe",
+            .ReleaseFast => "ReleaseFast",
+            .ReleaseSmall => "ReleaseSmall",
+        },
         .os = @tagName(builtin.os.tag),
         .arch = @tagName(builtin.cpu.arch),
     };

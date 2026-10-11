@@ -1,6 +1,5 @@
 //! Sierra — statistically reliable benchmarking for Zig.
 //!
-//! Sierra is a component of the `scz` package (Santa Cruz de la Sierra).
 //! Import with `@import("sierra")`.
 //!
 //! ## Quick start
@@ -19,7 +18,7 @@
 //! };
 //! ```
 //!
-//! Build with `sierra.addBenchmarkExecutable` from scz's `build.zig`.
+//! Build with `addBenchmarkExecutable` from Sierra's `build.zig`.
 const std = @import("std");
 
 pub const clock = @import("clock.zig");
