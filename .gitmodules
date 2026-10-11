@@ -1,0 +1,12 @@
+[submodule "references/zmida"]
+	path = references/zmida
+	url = https://github.com/jnordwick/zmida
+[submodule "references/zBench"]
+	path = references/zBench
+	url = https://github.com/hendriknielaender/zBench
+[submodule "references/zig-benchmark"]
+	path = references/zig-benchmark
+	url = https://github.com/mattrobenolt/zig-benchmark
+[submodule "references/criterion.rs"]
+	path = references/criterion.rs
+	url = https://github.com/bheisler/criterion.rs
