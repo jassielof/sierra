@@ -1,0 +1,17 @@
+.{
+    .name = .sierra,
+    .version = "0.1.0",
+    .fingerprint = 0xd4673a45a73f938f,
+    .minimum_zig_version = "0.17.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "lib",
+        "tools",
+        "examples",
+        "tests",
+        "LICENSE.txt",
+        "README.md",
+    },
+}
